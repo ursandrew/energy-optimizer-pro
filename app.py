@@ -2,13 +2,11 @@
 ENERGY MODELING OPTIMIZER BY SJ
 ===============================
 Professional renewable energy optimization tool with BCG-style interface.
-Version 4.0 - Enhanced Edition
 """
 
 import streamlit as st
 import pandas as pd
 import numpy as np
-import plotly.graph_objects as go
 from datetime import datetime
 
 # Page configuration
@@ -19,7 +17,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS - Professional Dark Theme
+# Custom CSS
 st.markdown("""
 <style>
     .main {
@@ -56,7 +54,6 @@ st.markdown("""
     .stButton>button {
         border-radius: 10px;
         font-weight: 600;
-        transition: all 0.3s ease;
     }
     
     .component-card {
@@ -76,137 +73,30 @@ st.markdown("""
         margin: 10px 0;
         opacity: 0.5;
     }
+    
+    .topology-box {
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        border: 3px solid #00D9FF;
+        border-radius: 20px;
+        padding: 30px;
+        margin: 20px 0;
+        text-align: center;
+    }
+    
+    .flow-arrow {
+        font-size: 40px;
+        color: #FFD700;
+        margin: 0 20px;
+    }
+    
+    .component-icon {
+        font-size: 60px;
+        margin: 10px;
+    }
 </style>
 """, unsafe_allow_html=True)
 
-# ============================================================================
-# TOPOLOGY DIAGRAM FUNCTION
-# ============================================================================
-
-def create_topology_diagram(pv_enabled, wind_enabled, hydro_enabled, bess_enabled,
-                            pv_range="", wind_range="", hydro_range="", bess_range=""):
-    """Create interactive topology diagram."""
-    
-    fig = go.Figure()
-    
-    # Node positions
-    node_pos = {
-        'pv': (0.15, 0.85),
-        'wind': (0.15, 0.5),
-        'hydro': (0.15, 0.15),
-        'bus': (0.5, 0.5),
-        'bess': (0.75, 0.5),
-        'load': (0.95, 0.5)
-    }
-    
-    # Colors
-    node_colors = {
-        'pv': '#FDB462' if pv_enabled else '#555555',
-        'wind': '#80B1D3' if wind_enabled else '#555555',
-        'hydro': '#8DD3C7' if hydro_enabled else '#555555',
-        'bus': '#FFD700',
-        'bess': '#FB8072' if bess_enabled else '#555555',
-        'load': '#B3DE69'
-    }
-    
-    # Draw edges
-    edges = []
-    if pv_enabled:
-        edges.append(('pv', 'bus', '#FDB462'))
-    if wind_enabled:
-        edges.append(('wind', 'bus', '#80B1D3'))
-    if hydro_enabled:
-        edges.append(('hydro', 'bus', '#8DD3C7'))
-    edges.append(('bus', 'load', '#FFD700'))
-    if bess_enabled:
-        edges.append(('bus', 'bess', '#FB8072'))
-    
-    for start, end, color in edges:
-        x0, y0 = node_pos[start]
-        x1, y1 = node_pos[end]
-        
-        fig.add_trace(go.Scatter(
-            x=[x0, x1],
-            y=[y0, y1],
-            mode='lines',
-            line=dict(color=color, width=4),
-            opacity=0.8,
-            hoverinfo='skip',
-            showlegend=False
-        ))
-        
-        # Arrow
-        mid_x, mid_y = (x0 + x1) / 2, (y0 + y1) / 2
-        angle = np.arctan2(y1 - y0, x1 - x0)
-        
-        fig.add_annotation(
-            x=mid_x, y=mid_y,
-            ax=mid_x - 0.02 * np.cos(angle),
-            ay=mid_y - 0.02 * np.sin(angle),
-            xref='x', yref='y', axref='x', ayref='y',
-            showarrow=True, arrowhead=2, arrowsize=1.5,
-            arrowwidth=3, arrowcolor=color
-        )
-    
-    # Node info
-    info = {
-        'pv': ('Solar PV', '☀️', pv_range if pv_enabled else "Disabled"),
-        'wind': ('Wind', '💨', wind_range if wind_enabled else "Disabled"),
-        'hydro': ('Hydro', '💧', hydro_range if hydro_enabled else "Disabled"),
-        'bus': ('Grid', '⚡', 'Distribution Hub'),
-        'bess': ('BESS', '🔋', bess_range if bess_enabled else "Disabled"),
-        'load': ('Load', '🏭', 'Consumer Load')
-    }
-    
-    # Draw nodes
-    for node, (x, y) in node_pos.items():
-        name, icon, cap = info[node]
-        
-        fig.add_trace(go.Scatter(
-            x=[x], y=[y],
-            mode='markers+text',
-            marker=dict(
-                size=80,
-                color=node_colors[node],
-                line=dict(color='white', width=4)
-            ),
-            text=icon,
-            textfont=dict(size=32),
-            textposition='middle center',
-            hovertemplate=f"<b>{name}</b><br>{cap}<extra></extra>",
-            showlegend=False
-        ))
-        
-        fig.add_annotation(
-            x=x, y=y - 0.12,
-            text=f"<b>{name}</b>",
-            showarrow=False,
-            font=dict(size=14, color='white')
-        )
-        
-        fig.add_annotation(
-            x=x, y=y - 0.16,
-            text=f"<i>{cap}</i>",
-            showarrow=False,
-            font=dict(size=11, color='#00D9FF')
-        )
-    
-    fig.update_layout(
-        plot_bgcolor='#0E1117',
-        paper_bgcolor='#0E1117',
-        xaxis=dict(showgrid=False, showticklabels=False, zeroline=False, range=[0, 1.1]),
-        yaxis=dict(showgrid=False, showticklabels=False, zeroline=False, range=[0, 1.0]),
-        height=450,
-        margin=dict(l=20, r=20, t=20, b=20),
-        hovermode='closest'
-    )
-    
-    return fig
-
-# ============================================================================
-# SESSION STATE
-# ============================================================================
-
+# Session State
 if 'pv_config' not in st.session_state:
     st.session_state.pv_config = {
         'enabled': True, 'min': 1.0, 'max': 5.0, 'step': 1.0,
@@ -236,44 +126,65 @@ if 'bess_config' not in st.session_state:
 if 'selected_component' not in st.session_state:
     st.session_state.selected_component = None
 
-# ============================================================================
-# HEADER
-# ============================================================================
-
+# Header
 st.markdown('<p class="big-font">⚡ ENERGY MODELING OPTIMIZER</p>', unsafe_allow_html=True)
 st.markdown('<p class="subtitle">BY SJ</p>', unsafe_allow_html=True)
 st.markdown("---")
 
-# ============================================================================
-# MAIN TABS
-# ============================================================================
-
+# Main tabs
 tab1, tab2, tab3 = st.tabs(["🔌 System Design", "⚙️ Optimize", "📊 Results"])
 
-# ============================================================================
 # TAB 1: SYSTEM DESIGN
-# ============================================================================
-
 with tab1:
     
-    # Topology Diagram
+    # Visual Topology
     st.markdown("### 🔌 System Architecture")
-    st.markdown("**Interactive Energy Flow Diagram**")
     
     pv_cfg = st.session_state.pv_config
     wind_cfg = st.session_state.wind_config
     hydro_cfg = st.session_state.hydro_config
     bess_cfg = st.session_state.bess_config
     
-    topology_fig = create_topology_diagram(
-        pv_cfg['enabled'], wind_cfg['enabled'], hydro_cfg['enabled'], bess_cfg['enabled'],
-        f"{pv_cfg['min']:.1f}-{pv_cfg['max']:.1f} MW",
-        f"{wind_cfg['min']:.1f}-{wind_cfg['max']:.1f} MW",
-        f"{hydro_cfg['min']:.1f}-{hydro_cfg['max']:.1f} MW",
-        f"{bess_cfg['min_power']:.1f}-{bess_cfg['max_power']:.1f} MW"
-    )
+    # Simple visual topology
+    st.markdown('<div class="topology-box">', unsafe_allow_html=True)
     
-    st.plotly_chart(topology_fig, use_container_width=True)
+    col1, col2, col3, col4, col5 = st.columns([2, 1, 2, 1, 2])
+    
+    with col1:
+        st.markdown('<div style="text-align: center;">', unsafe_allow_html=True)
+        st.markdown('<p class="component-icon">☀️</p>', unsafe_allow_html=True)
+        st.markdown(f"**Solar PV**<br>{'✅ ' + str(pv_cfg['min']) + '-' + str(pv_cfg['max']) + ' MW' if pv_cfg['enabled'] else '❌ Disabled'}", unsafe_allow_html=True)
+        st.markdown('<p class="component-icon">💨</p>', unsafe_allow_html=True)
+        st.markdown(f"**Wind**<br>{'✅ ' + str(wind_cfg['min']) + '-' + str(wind_cfg['max']) + ' MW' if wind_cfg['enabled'] else '❌ Disabled'}", unsafe_allow_html=True)
+        st.markdown('<p class="component-icon">💧</p>', unsafe_allow_html=True)
+        st.markdown(f"**Hydro**<br>{'✅ ' + str(hydro_cfg['min']) + '-' + str(hydro_cfg['max']) + ' MW' if hydro_cfg['enabled'] else '❌ Disabled'}", unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    with col2:
+        st.markdown('<p class="flow-arrow">→</p>', unsafe_allow_html=True)
+        st.markdown('<p class="flow-arrow">→</p>', unsafe_allow_html=True)
+        st.markdown('<p class="flow-arrow">→</p>', unsafe_allow_html=True)
+    
+    with col3:
+        st.markdown('<div style="text-align: center; padding-top: 80px;">', unsafe_allow_html=True)
+        st.markdown('<p class="component-icon">⚡</p>', unsafe_allow_html=True)
+        st.markdown("**Electricity Grid**<br>Distribution Hub", unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    with col4:
+        st.markdown('<p class="flow-arrow" style="padding-top: 80px;">→</p>', unsafe_allow_html=True)
+        st.markdown('<p class="flow-arrow">↕</p>', unsafe_allow_html=True)
+    
+    with col5:
+        st.markdown('<div style="text-align: center; padding-top: 80px;">', unsafe_allow_html=True)
+        st.markdown('<p class="component-icon">🏭</p>', unsafe_allow_html=True)
+        st.markdown("**Load Demand**<br>Consumer Load", unsafe_allow_html=True)
+        st.markdown('<br><br>', unsafe_allow_html=True)
+        st.markdown('<p class="component-icon">🔋</p>', unsafe_allow_html=True)
+        st.markdown(f"**BESS**<br>{'✅ ' + str(bess_cfg['min_power']) + '-' + str(bess_cfg['max_power']) + ' MW' if bess_cfg['enabled'] else '❌ Disabled'}", unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    st.markdown('</div>', unsafe_allow_html=True)
     
     st.markdown("---")
     
@@ -302,7 +213,7 @@ with tab1:
     
     st.markdown("---")
     
-    # Configuration panel
+    # Configuration panels
     if st.session_state.selected_component == 'pv':
         st.markdown("## ☀️ Solar PV Configuration")
         
@@ -311,42 +222,45 @@ with tab1:
         if enabled:
             st.markdown("### 📊 Capacity Range")
             col1, col2 = st.columns(2)
-            
             with col1:
-                min_cap = st.slider("Min (MW)", 0.0, 50.0, pv_cfg['min'], 0.5)
+                min_cap = st.slider("Minimum (MW)", 0.0, 50.0, pv_cfg['min'], 0.5)
+                st.metric("Min Capacity", f"{min_cap:.1f} MW")
             with col2:
-                max_cap = st.slider("Max (MW)", 0.0, 50.0, pv_cfg['max'], 0.5)
+                max_cap = st.slider("Maximum (MW)", 0.0, 50.0, pv_cfg['max'], 0.5)
+                st.metric("Max Capacity", f"{max_cap:.1f} MW")
             
-            step = st.slider("Step (MW)", 0.1, 10.0, pv_cfg['step'], 0.1)
+            step = st.slider("Step Size (MW)", 0.1, 10.0, pv_cfg['step'], 0.1)
+            
             num_opts = int((max_cap - min_cap) / step) + 1 if step > 0 else 1
-            
             if num_opts <= 10:
-                st.success(f"🟢 {num_opts} configurations")
+                st.success(f"🟢 {num_opts} configurations - Small search space")
             elif num_opts <= 50:
-                st.warning(f"🟡 {num_opts} configurations")
+                st.warning(f"🟡 {num_opts} configurations - Medium search space")
             else:
-                st.error(f"🔴 {num_opts} configurations")
+                st.error(f"🔴 {num_opts} configurations - Large search space")
             
-            st.markdown("### 💰 Financial")
+            st.markdown("### 💰 Financial Parameters")
             col1, col2, col3 = st.columns(3)
             with col1:
-                capex = st.number_input("CapEx ($/kW)", value=pv_cfg['capex'])
+                capex = st.number_input("CapEx ($/kW)", value=pv_cfg['capex'], step=50)
             with col2:
-                opex = st.number_input("OpEx ($/kW/yr)", value=pv_cfg['opex'])
+                opex = st.number_input("OpEx ($/kW/yr)", value=pv_cfg['opex'], step=1)
             with col3:
-                lifetime = st.number_input("Lifetime (yrs)", value=pv_cfg['lifetime'])
+                lifetime = st.number_input("Lifetime (years)", value=pv_cfg['lifetime'], step=1)
             
-            st.markdown("### 📁 Profile")
-            pv_file = st.file_uploader("PV Profile (1 kW)", type=['csv', 'xlsx'])
+            st.markdown("### 📁 Generation Profile")
+            pv_file = st.file_uploader("Upload PV Profile (1 kW normalized)", type=['csv', 'xlsx'], key="pv_file")
+            if pv_file:
+                st.success(f"✅ Loaded: {pv_file.name}")
             
             col1, col2 = st.columns([3, 1])
             with col1:
-                if st.button("✅ Save", type="primary", use_container_width=True):
+                if st.button("✅ Save Solar PV Configuration", type="primary", use_container_width=True):
                     st.session_state.pv_config = {
                         'enabled': enabled, 'min': min_cap, 'max': max_cap, 'step': step,
                         'capex': capex, 'opex': opex, 'lifetime': lifetime, 'profile': pv_file
                     }
-                    st.success("✅ Saved!")
+                    st.success("✅ Solar PV configuration saved!")
                     st.session_state.selected_component = None
                     st.rerun()
             with col2:
@@ -354,22 +268,21 @@ with tab1:
                     st.session_state.selected_component = None
                     st.rerun()
         else:
-            if st.button("✅ Save", type="primary"):
+            if st.button("✅ Save Configuration", type="primary"):
                 st.session_state.pv_config['enabled'] = False
                 st.session_state.selected_component = None
                 st.rerun()
     
     elif st.session_state.selected_component == 'wind':
         st.markdown("## 💨 Wind Configuration")
-        
         enabled = st.toggle("Enable Wind", value=wind_cfg['enabled'])
         
         if enabled:
             col1, col2 = st.columns(2)
             with col1:
-                min_cap = st.slider("Min (MW)", 0.0, 50.0, wind_cfg['min'], 0.5)
+                min_cap = st.slider("Minimum (MW)", 0.0, 50.0, wind_cfg['min'], 0.5)
             with col2:
-                max_cap = st.slider("Max (MW)", 0.0, 50.0, wind_cfg['max'], 0.5)
+                max_cap = st.slider("Maximum (MW)", 0.0, 50.0, wind_cfg['max'], 0.5)
             
             step = st.slider("Step (MW)", 0.1, 10.0, wind_cfg['step'], 0.1)
             
@@ -383,7 +296,7 @@ with tab1:
             
             wind_file = st.file_uploader("Wind Profile", type=['csv', 'xlsx'])
             
-            if st.button("✅ Save", type="primary"):
+            if st.button("✅ Save Wind Configuration", type="primary"):
                 st.session_state.wind_config = {
                     'enabled': enabled, 'min': min_cap, 'max': max_cap, 'step': step,
                     'capex': capex, 'opex': opex, 'lifetime': lifetime, 'profile': wind_file
@@ -398,7 +311,6 @@ with tab1:
     
     elif st.session_state.selected_component == 'hydro':
         st.markdown("## 💧 Hydro Configuration")
-        
         enabled = st.toggle("Enable Hydro", value=hydro_cfg['enabled'])
         
         if enabled:
@@ -409,7 +321,7 @@ with tab1:
                 max_cap = st.slider("Max (MW)", 0.0, 30.0, hydro_cfg['max'], 0.5)
             
             step = st.slider("Step (MW)", 0.1, 10.0, hydro_cfg['step'], 0.1)
-            hours = st.slider("Hours/day", 1, 24, hydro_cfg['hours_per_day'])
+            hours = st.slider("Operating Hours/Day", 1, 24, hydro_cfg['hours_per_day'])
             
             col1, col2, col3 = st.columns(3)
             with col1:
@@ -419,9 +331,9 @@ with tab1:
             with col3:
                 lifetime = st.number_input("Lifetime (yrs)", value=hydro_cfg['lifetime'])
             
-            hydro_file = st.file_uploader("Hydro Profile", type=['csv', 'xlsx'])
+            hydro_file = st.file_uploader("Hydro Profile (Optional)", type=['csv', 'xlsx'])
             
-            if st.button("✅ Save", type="primary"):
+            if st.button("✅ Save Hydro Configuration", type="primary"):
                 st.session_state.hydro_config = {
                     'enabled': enabled, 'min': min_cap, 'max': max_cap, 'step': step,
                     'hours_per_day': hours, 'capex': capex, 'opex': opex,
@@ -436,19 +348,21 @@ with tab1:
                 st.rerun()
     
     elif st.session_state.selected_component == 'bess':
-        st.markdown("## 🔋 BESS Configuration")
-        
+        st.markdown("## 🔋 Battery Storage Configuration")
         enabled = st.toggle("Enable BESS", value=bess_cfg['enabled'])
         
         if enabled:
             col1, col2 = st.columns(2)
             with col1:
-                min_pow = st.slider("Min (MW)", 0.0, 100.0, bess_cfg['min_power'], 1.0)
+                min_pow = st.slider("Min Power (MW)", 0.0, 100.0, bess_cfg['min_power'], 1.0)
             with col2:
-                max_pow = st.slider("Max (MW)", 0.0, 100.0, bess_cfg['max_power'], 1.0)
+                max_pow = st.slider("Max Power (MW)", 0.0, 100.0, bess_cfg['max_power'], 1.0)
             
             step_pow = st.slider("Step (MW)", 0.5, 20.0, bess_cfg['step_power'], 0.5)
-            duration = st.slider("Duration (hrs)", 0.5, 8.0, bess_cfg['duration'], 0.5)
+            duration = st.slider("Duration (hours)", 0.5, 8.0, bess_cfg['duration'], 0.5)
+            
+            max_energy = max_pow * duration
+            st.info(f"💡 Max Energy Capacity: {max_energy:.1f} MWh")
             
             col1, col2 = st.columns(2)
             with col1:
@@ -458,7 +372,7 @@ with tab1:
                 opex = st.number_input("OpEx ($/kW/yr)", value=bess_cfg['opex'])
                 lifetime = st.number_input("Lifetime (yrs)", value=bess_cfg['lifetime'])
             
-            if st.button("✅ Save", type="primary"):
+            if st.button("✅ Save BESS Configuration", type="primary"):
                 st.session_state.bess_config = {
                     'enabled': enabled, 'min_power': min_pow, 'max_power': max_pow,
                     'step_power': step_pow, 'duration': duration,
@@ -485,42 +399,47 @@ with tab1:
             if pv_cfg['enabled']:
                 st.markdown('<div class="component-card">', unsafe_allow_html=True)
                 st.markdown("### ☀️ Solar PV ✅")
-                st.write(f"Range: {pv_cfg['min']:.1f}-{pv_cfg['max']:.1f} MW")
+                st.write(f"**Range:** {pv_cfg['min']:.1f} - {pv_cfg['max']:.1f} MW")
+                st.write(f"**Step:** {pv_cfg['step']:.1f} MW")
+                st.write(f"**CapEx:** ${pv_cfg['capex']}/kW")
                 st.markdown('</div>', unsafe_allow_html=True)
             else:
                 st.markdown('<div class="component-card-disabled">', unsafe_allow_html=True)
-                st.markdown("### ☀️ Solar PV ❌")
+                st.markdown("### ☀️ Solar PV ❌ DISABLED")
                 st.markdown('</div>', unsafe_allow_html=True)
             
             if hydro_cfg['enabled']:
                 st.markdown('<div class="component-card">', unsafe_allow_html=True)
                 st.markdown("### 💧 Hydro ✅")
-                st.write(f"Range: {hydro_cfg['min']:.1f}-{hydro_cfg['max']:.1f} MW")
+                st.write(f"**Range:** {hydro_cfg['min']:.1f} - {hydro_cfg['max']:.1f} MW")
+                st.write(f"**Hours/day:** {hydro_cfg['hours_per_day']}")
                 st.markdown('</div>', unsafe_allow_html=True)
             else:
                 st.markdown('<div class="component-card-disabled">', unsafe_allow_html=True)
-                st.markdown("### 💧 Hydro ❌")
+                st.markdown("### 💧 Hydro ❌ DISABLED")
                 st.markdown('</div>', unsafe_allow_html=True)
         
         with col2:
             if wind_cfg['enabled']:
                 st.markdown('<div class="component-card">', unsafe_allow_html=True)
                 st.markdown("### 💨 Wind ✅")
-                st.write(f"Range: {wind_cfg['min']:.1f}-{wind_cfg['max']:.1f} MW")
+                st.write(f"**Range:** {wind_cfg['min']:.1f} - {wind_cfg['max']:.1f} MW")
+                st.write(f"**Step:** {wind_cfg['step']:.1f} MW")
                 st.markdown('</div>', unsafe_allow_html=True)
             else:
                 st.markdown('<div class="component-card-disabled">', unsafe_allow_html=True)
-                st.markdown("### 💨 Wind ❌")
+                st.markdown("### 💨 Wind ❌ DISABLED")
                 st.markdown('</div>', unsafe_allow_html=True)
             
             if bess_cfg['enabled']:
                 st.markdown('<div class="component-card">', unsafe_allow_html=True)
                 st.markdown("### 🔋 BESS ✅")
-                st.write(f"Power: {bess_cfg['min_power']:.1f}-{bess_cfg['max_power']:.1f} MW")
+                st.write(f"**Power:** {bess_cfg['min_power']:.1f} - {bess_cfg['max_power']:.1f} MW")
+                st.write(f"**Duration:** {bess_cfg['duration']:.1f} hours")
                 st.markdown('</div>', unsafe_allow_html=True)
             else:
                 st.markdown('<div class="component-card-disabled">', unsafe_allow_html=True)
-                st.markdown("### 🔋 BESS ❌")
+                st.markdown("### 🔋 BESS ❌ DISABLED")
                 st.markdown('</div>', unsafe_allow_html=True)
 
 with tab2:
@@ -529,21 +448,25 @@ with tab2:
 
 with tab3:
     st.header("📊 Results")
-    st.info("ℹ️ No results yet")
+    st.info("ℹ️ No results yet. Run optimization first.")
 
 # Sidebar
 with st.sidebar:
-    st.markdown("### ⚙️ Settings")
+    st.markdown("### ⚙️ Global Settings")
     
-    discount_rate = st.number_input("Discount Rate (%)", value=8.0)
-    inflation_rate = st.number_input("Inflation Rate (%)", value=2.0)
-    project_lifetime = st.number_input("Project Lifetime (yrs)", value=25)
+    st.markdown("#### 💰 Financial Parameters")
+    discount_rate = st.number_input("Discount Rate (%)", value=8.0, step=0.5)
+    inflation_rate = st.number_input("Inflation Rate (%)", value=2.0, step=0.5)
+    project_lifetime = st.number_input("Project Lifetime (years)", value=25, step=1)
     
     st.markdown("---")
-    st.markdown("### 🏭 Load")
+    st.markdown("#### 🏭 Load Profile & Constraints")
     
-    load_file = st.file_uploader("Load Profile", type=['csv', 'xlsx'])
-    target_unmet = st.number_input("Target Unmet (%)", value=0.1)
+    load_file = st.file_uploader("📁 Load Profile (kW)", type=['csv', 'xlsx'])
+    if load_file:
+        st.success(f"✅ Loaded: {load_file.name}")
+    
+    target_unmet = st.number_input("Target Unmet Load (%)", value=0.1, step=0.1)
     
     st.markdown("---")
     st.markdown("### 📊 Search Space")
@@ -556,11 +479,12 @@ with st.sidebar:
     total = pv_opts * wind_opts * hydro_opts * bess_opts
     
     st.metric("Total Combinations", f"{total:,}")
+    st.metric("Est. Runtime", f"{max(1, total * 0.05 / 60):.1f} min")
 
 st.markdown("---")
 st.markdown("""
 <div style="text-align: center; color: #00D9FF; padding: 20px;">
-    <p style="font-size: 18px;"><b>⚡ Energy Modeling Optimizer v4.0</b></p>
+    <p style="font-size: 18px;"><b>⚡ Energy Modeling Optimizer v4.0 Professional</b></p>
     <p style="font-size: 14px;">Developed by SJ | 2026</p>
 </div>
 """, unsafe_allow_html=True)
